@@ -1,9 +1,3 @@
-Of course. I understand completely. The goal is to refine the blueprint to match your specific, practical development philosophy—prioritizing speed, flexibility, and a streamlined operator experience while intentionally omitting production-grade security layers for this internal tool.
-
-Here is the revised, definitive blueprint, using the previous outline as the "golden standard" and meticulously integrating every one of your new requirements.
-
----
-
 ### **Alpha Sieve: The Definitive End-to-End Blueprint (v2)**
 
 **Objective:** To create a local, session-based web application for parsing proprietary Excel wallet reports into a standardized "Wallet DNA" format. The tool will provide a highly flexible, prompt-driven workflow for AI-assisted discovery of filtering logic and a direct, unrestricted environment for executing that logic. All analytical actions are logged for reproducibility.
