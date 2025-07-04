@@ -1,0 +1,17 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# User-specific configuration
+# This file contains API keys and should NEVER be committed.
+config.json
+
+# Generated log files
+LOGS/
+
+# Compressed archives and backups
+*.rar
+*.zip
+
+# IDE specific files (example for VSCode)
+.vscode/
