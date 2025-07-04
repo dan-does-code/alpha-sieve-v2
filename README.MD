@@ -1,0 +1,96 @@
+Of course. I understand completely. The goal is to refine the blueprint to match your specific, practical development philosophy—prioritizing speed, flexibility, and a streamlined operator experience while intentionally omitting production-grade security layers for this internal tool.
+
+Here is the revised, definitive blueprint, using the previous outline as the "golden standard" and meticulously integrating every one of your new requirements.
+
+---
+
+### **Alpha Sieve: The Definitive End-to-End Blueprint (v2)**
+
+**Objective:** To create a local, session-based web application for parsing proprietary Excel wallet reports into a standardized "Wallet DNA" format. The tool will provide a highly flexible, prompt-driven workflow for AI-assisted discovery of filtering logic and a direct, unrestricted environment for executing that logic. All analytical actions are logged for reproducibility.
+
+---
+
+### **0. Configuration & Session Management**
+
+1.  **Project-Level Configuration (`config.json`):**
+    *   A single `config.json` file at the project root will store persistent user settings.
+    *   **Structure:**
+        ```json
+        {
+          "api_key": "sk-...",
+          "starred_models": ["nebula-pro-v3", "gpt-4-turbo-preview"],
+          "all_models": ["nebula-pro-v3", "gpt-4-...", "..."]
+        }
+        ```
+
+2.  **Session Initialization:**
+    *   **On Launch (`python app.py`):** The application creates a unique session directory in `./LOGS/` named `session_{n+1}_{YYYY-MM-DD}_{HH-MM-SS}`.
+    *   **Master Log File:** A `main.log` is created within this session folder. The first entry is a session start timestamp. All subsequent actions are appended to this file.
+
+---
+
+### **1. Launch & Local Web UI**
+
+1.  **Server & Interface:** A Python web server starts, serving the single-page UI at `http://localhost:5000`.
+2.  **Top-Bar Controls:**
+    *   **API Key Field:** Displays the `api_key` from `config.json`. A "pencil" icon allows editing. On "save," the backend updates `config.json` and immediately attempts to validate the new key (e.g., by fetching account balance from Nebius), providing instant "valid" or "invalid" feedback to the user.
+    *   **Model Selector:** A dropdown menu populated *only* with the `starred_models` from `config.json` for a clean, focused UI.
+    *   **Model List Management:** A separate "Refresh Model List" button. When clicked, the backend calls the API (e.g., `GET /v1/models`), overwrites the `all_models` list in `config.json` with the fresh data, and confirms the update.
+
+---
+
+### **2. File Ingestion & Schema Parsing**
+
+1.  **File Picker:** The UI presents a multi-select file input for `.xlsx` reports.
+2.  **On Upload:**
+    *   The selected filenames are logged to `main.log`.
+    *   The backend's parsing engine (`parse_workbook_to_enriched_json`) processes each file, generating the Wallet DNA JSON objects.
+    *   **Data Handling:**
+        *   **In-Memory:** All objects are appended to a single `walletsArray` list for the session.
+        *   **On-Disk Artifact:** The complete `walletsArray` is saved as `parsed_{timestamp}.json` in the current session folder, creating an auditable record of the input data.
+
+---
+
+### **3. Two Modes of Operation**
+
+#### **A) AI-Assisted Filter Discovery (The "Learn" Phase)**
+
+1.  **Prompt Selection:** The UI features a dropdown menu populated with the filenames of all `.txt` files found in the `./prompts/` directory. This allows the operator to experiment with different prompt templates.
+2.  **User Selection:** The UI displays the parsed wallets. The user marks "GOOD" wallets. This selection is logged.
+3.  **API Call ("Learn Filter"):**
+    *   The backend reads the content of the selected prompt template file from the `./prompts/` directory.
+    *   It finds a placeholder (e.g., `${wallets_json}`) within the template text and injects the JSON string of the selected "GOOD" wallets.
+    *   This fully formed prompt is sent to the selected AI model.
+4.  **Comprehensive Logging:**
+    *   The complete request sent to the AI (including the dynamically built prompt) is saved to `ai_request_{ts}.json`.
+    *   The AI's full, unmodified response is saved to `ai_completion_{ts}.json`.
+5.  **Code Snippet Extraction & Handling:**
+    *   The backend parses the AI's completion text, specifically looking for and extracting the content enclosed within `<code>...</code>` tags.
+    *   The extracted code snippet is populated into a dedicated "Generated Code" textarea in the UI.
+    *   This textarea is equipped with three utility buttons:
+        *   **Copy:** Copies the snippet to the clipboard.
+        *   **Save as .txt:** Saves the snippet as a text file.
+        *   **Clear:** Clears the textarea, showing a confirmation alert (`Are you sure? y/n`) first.
+
+#### **B) Direct Code Execution (The "Apply" Phase)**
+
+1.  **Code Input:** The user pastes a Python script into the "Generated Code" textarea (or uses the one generated by the AI).
+2.  **Execution Request:** The user clicks "Execute." The frontend sends a request containing `{ code: <snippet_string> }` to the backend.
+3.  **Direct Backend Execution:**
+    *   **No Sandboxing:** Security measures like sandboxing, namespace control, and restricted built-ins are deliberately omitted to maximize simplicity and avoid potential bugs from over-engineering. The system trusts the operator and the AI-generated code.
+    *   **Execution Logic:** The backend converts the in-memory `walletsArray` to a pandas DataFrame. It then executes the user-provided code string directly using `exec()`. The prompt sent to the AI is engineered to be highly specific, ensuring the generated code is deterministic and safe for this internal-use context.
+4.  **Result Logging & Display:**
+    *   Execution start/end times are logged to `main.log`.
+    *   The resulting filtered DataFrame is serialized and saved as `results_{ts}.json` in the session folder.
+    *   The final list of filtered wallet addresses is sent to the UI for display.
+
+---
+
+### **4. Session Artifacts & Audit Trail**
+
+Each `session_{...}` folder in `./LOGS/` provides a complete, self-contained record of the analysis:
+
+*   `main.log`: The chronological log of all major actions.
+*   `parsed_{timestamp}.json`: The exact input data for the session.
+*   `ai_request_{timestamp}.json` & `ai_completion_{timestamp}.json`: The complete, auditable AI interaction trail.
+*   `results_{timestamp}.json`: The final data outputs from each filter execution.
